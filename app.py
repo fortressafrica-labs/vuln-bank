@@ -349,18 +349,16 @@ def register():
                     'tried_at': str(datetime.now())  # Information disclosure
                 }), 400
             
-            # Build dynamic query based on user input fields
-            # Vulnerability: Mass Assignment possible here
+            # Registration binds only server-approved fields: username,
+            # server-side password value and the server-generated
+            # account_number. Privileged fields such as is_admin are never
+            # taken from client input; they keep their database defaults
+            # (is_admin BOOLEAN DEFAULT FALSE in database.py).
             fields = ['username', 'password', 'account_number']
             values = [username, user_data.get('password'), account_number]
             
-            # Include any additional parameters from user input
-            for key, value in user_data.items():
-                if key not in ['username', 'password']:
-                    fields.append(key)
-                    values.append(value)
-            
-            # Build the SQL query dynamically
+            # Build the SQL query from the fixed server-side column list
+            # (values are parameterised via %s placeholders in execute_query)
             query = f"""
                 INSERT INTO users ({', '.join(fields)})
                 VALUES ({', '.join(['%s'] * len(fields))})
