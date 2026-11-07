@@ -1610,6 +1610,17 @@ def api_v3_reset_password():
         reset_pin = data.get('reset_pin')
         new_password = data.get('new_password')
         
+        # Version binding: v3 pins are always 4 digits (issued by
+        # /api/v3/forgot-password), while the shared `reset_pin` column also
+        # holds 3-digit pins issued (and disclosed) by /api/v1/forgot-password.
+        # Reject anything that is not exactly four digits before the lookup so
+        # a v1-issued disclosed pin can never satisfy this endpoint.
+        if not (isinstance(reset_pin, str) and len(reset_pin) == 4 and reset_pin.isdigit()):
+            return jsonify({
+                'status': 'error',
+                'message': 'Invalid reset PIN'
+            }), 400
+        
         # Vulnerability: No rate limiting on PIN attempts
         # Vulnerability: Timing attack possible in PIN verification
         user = execute_query(
